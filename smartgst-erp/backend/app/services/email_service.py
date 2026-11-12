@@ -1,4 +1,5 @@
 import smtplib
+from html import escape
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -156,21 +157,36 @@ class EmailService:
             return False
     
     @staticmethod
-    def send_invoice_pdf_email(email: str, customer_name: str, invoice_number: str, invoice_pdf_path: str) -> bool:
-        """Send invoice PDF as an email attachment to the customer"""
+    def send_invoice_pdf_email(
+        email: str,
+        customer_name: str,
+        invoice_number: str,
+        invoice_pdf_path: str,
+    ) -> bool:
+        """Send the invoice PDF, which includes any uploaded photo, to the customer."""
         try:
             if not settings.ENABLE_EMAIL_NOTIFICATIONS:
                 return False
 
             subject = f"Invoice {invoice_number} - SmartGST AI ERP"
+            safe_customer_name = escape(customer_name or "Customer")
+            safe_invoice_number = escape(invoice_number)
             html_body = f"""
             <!DOCTYPE html>
-            <html>
+            <html><head><meta charset="UTF-8"></head>
             <body>
-                <h2>Invoice Ready</h2>
-                <p>Hello {customer_name},</p>
-                <p>Please find attached the PDF invoice for invoice {invoice_number}.</p>
-                <p>Thank you for your business.</p>
+                <div style="max-width:620px;margin:0 auto;font-family:Arial,sans-serif;color:#17324d;border:1px solid #dce5ea;border-radius:8px;overflow:hidden">
+                    <div style="background:#17324d;color:#fff;padding:24px 28px">
+                        <div style="font-size:12px;letter-spacing:1.5px;color:#9de0d8">SMARTGST AI ERP</div>
+                        <h2 style="margin:8px 0 0;font-size:24px">Your invoice is ready</h2>
+                    </div>
+                    <div style="padding:28px">
+                        <p style="font-size:16px">Hello {safe_customer_name},</p>
+                        <p>Please find your invoice <strong>#{safe_invoice_number}</strong> attached as a PDF.</p>
+                        <p style="color:#52616b">The attachment is formatted for easy viewing, printing, and record keeping.</p>
+                        <p style="margin-top:28px">Thank you for your business.</p>
+                    </div>
+                </div>
             </body>
             </html>
             """
@@ -184,11 +200,12 @@ class EmailService:
             msg.attach(part)
 
             attachment_path = Path(invoice_pdf_path)
-            if attachment_path.exists():
-                with attachment_path.open("rb") as fh:
-                    part = MIMEApplication(fh.read(), Name=attachment_path.name)
-                part["Content-Disposition"] = f'attachment; filename="{attachment_path.name}"'
-                msg.attach(part)
+            if not attachment_path.is_file():
+                return False
+            with attachment_path.open("rb") as fh:
+                part = MIMEApplication(fh.read(), _subtype="pdf", Name=attachment_path.name)
+            part["Content-Disposition"] = f'attachment; filename="{attachment_path.name}"'
+            msg.attach(part)
 
             with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
                 server.starttls()

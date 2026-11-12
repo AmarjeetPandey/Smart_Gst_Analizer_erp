@@ -76,7 +76,6 @@ nano .env
 # - DATABASE_URL
 # - REDIS_URL
 # - SECRET_KEY
-# - SUPER_ADMIN_EMAIL
 # - SMTP credentials
 ```
 

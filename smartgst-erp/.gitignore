@@ -96,7 +96,7 @@ frontend/dist/
 backend/dist/
 
 # Migrations
-migrations/versions/
+*/migrations/versions/__pycache__/
 
 # ML Models
 *.pkl

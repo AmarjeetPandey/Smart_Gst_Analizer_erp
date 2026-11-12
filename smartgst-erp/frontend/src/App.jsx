@@ -8,6 +8,7 @@ import './styles/index.css';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import BusinessPage from './pages/BusinessPage';
+import AICenterPage from './pages/AICenterPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -29,6 +30,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <BusinessPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai-center"
+            element={
+              <ProtectedRoute>
+                <AICenterPage />
               </ProtectedRoute>
             }
           />

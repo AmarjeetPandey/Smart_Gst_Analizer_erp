@@ -26,7 +26,7 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
-    role ENUM('super_admin','admin','manager','accountant','operator','viewer'),
+    role ENUM('admin','manager','accountant','operator','viewer'),
     is_active BOOLEAN DEFAULT TRUE,
     is_email_verified BOOLEAN DEFAULT FALSE,
     last_login TIMESTAMP,

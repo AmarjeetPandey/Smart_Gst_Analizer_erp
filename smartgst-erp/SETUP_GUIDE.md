@@ -7,7 +7,6 @@ SmartGST AI ERP is a production-ready SaaS platform for GST management, accounti
 ### Key Features
 
 - **Email OTP Authentication** - Secure passwordless login
-- **Super Admin System** - Complete platform management
 - **AI Document Processing** - OCR for invoice/bill extraction
 - **GST Management** - Automated GST calculations and reports
 - **Accounting Module** - Complete accounting system
@@ -139,7 +138,7 @@ pip install -r requirements.txt
 cp ../.env.example .env
 
 # Edit .env and set your configurations
-# Important: Set DATABASE_URL, SMTP credentials, SUPER_ADMIN_EMAIL
+# Important: Set DATABASE_URL and SMTP credentials
 ```
 
 #### 2.4 Setup PostgreSQL Database
@@ -216,7 +215,7 @@ Redis will run on `localhost:6379`
 
 #### users
 - User authentication and profile
-- Roles: super_admin, admin, manager, accountant, operator, viewer
+- Roles: admin, manager, accountant, operator, viewer
 
 #### otp
 - Email verification OTPs
@@ -327,9 +326,6 @@ SMTP_PORT=587
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 SMTP_FROM_EMAIL=your-email@gmail.com
-
-# Admin
-SUPER_ADMIN_EMAIL=admin@smartgst.com
 
 # Application
 ENVIRONMENT=production

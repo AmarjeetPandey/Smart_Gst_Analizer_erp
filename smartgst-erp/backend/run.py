@@ -14,9 +14,6 @@ sys.path.insert(0, str(backend_dir))
 # Change to backend directory
 os.chdir(backend_dir)
 
-# Import app
-from app.main import app
-
 if __name__ == "__main__":
     print("\n" + "="*60)
     print("SmartGST AI ERP - Backend Server")
@@ -27,8 +24,9 @@ if __name__ == "__main__":
     print("="*60 + "\n")
     
     uvicorn.run(
-        app,
+        "app.main:app",
         host="127.0.0.1",
         port=8000,
-        log_level="info"
+        log_level="info",
+        reload=True,
     )

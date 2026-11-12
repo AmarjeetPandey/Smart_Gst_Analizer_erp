@@ -3,12 +3,13 @@ version: '3.8'
 services:
   # PostgreSQL Database
   postgres:
+    profiles: ["local-database"]
     image: postgres:15-alpine
     container_name: smartgst_postgres
     environment:
       POSTGRES_DB: smartgst_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
     ports:
       - "5432:5432"
     volumes:
@@ -40,23 +41,21 @@ services:
       dockerfile: docker/Dockerfile.backend
     container_name: smartgst_backend
     environment:
-      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/smartgst_db
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: your-super-secret-key-change-in-production
-      SUPER_ADMIN_EMAIL: admin@smartgst.com
-      SMTP_USERNAME: your-email@gmail.com
-      SMTP_PASSWORD: your-app-password
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,backend}
       ENVIRONMENT: production
       DEBUG: "False"
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
-      - ../backend:/app
       - backend_uploads:/app/uploads
       - backend_backups:/app/backups
       - backend_logs:/app/logs
@@ -72,16 +71,14 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
     container_name: smartgst_frontend
     ports:
       - "3000:3000"
-    environment:
-      VITE_API_URL: http://backend:8000/api/v1
     depends_on:
-      - backend
-    volumes:
-      - ../frontend:/app
-      - /app/node_modules
+      backend:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
@@ -95,7 +92,6 @@ services:
     container_name: smartgst_nginx
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - nginx_logs:/var/log/nginx

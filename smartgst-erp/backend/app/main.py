@@ -7,9 +7,9 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
-from app.core.database import engine, Base
+from app.core.database import engine, Base, ensure_schema_compatibility, resolved_database_url
 from app.models.database import User, OTP, UserSession, Branch, Customer, Vendor, Product, Inventory, Invoice, InvoiceItem, Purchase, PurchaseItem, Payment, VendorPayment, GSTRecord, Ledger, Transaction, AuditLog, Notification
-from app.api.routes import auth, dashboard
+from app.api.routes import ai, auth, dashboard, erp
 
 settings = get_settings()
 
@@ -20,8 +20,15 @@ async def lifespan(app: FastAPI):
     # Startup
     print("Starting SmartGST AI ERP...")
     Path("uploads").mkdir(parents=True, exist_ok=True)
-    Base.metadata.create_all(bind=engine)
-    print("Database tables created successfully")
+    if settings.ENVIRONMENT == "development" and resolved_database_url.startswith("sqlite"):
+        Base.metadata.create_all(bind=engine)
+        ensure_schema_compatibility()
+        print("Development SQLite database tables created successfully")
+    elif settings.ENVIRONMENT == "development":
+        ensure_schema_compatibility()
+        print("Using pre-initialized PostgreSQL database")
+    else:
+        print("Production database schema must be prepared before startup")
     yield
     # Shutdown
     print("Shutting down SmartGST AI ERP...")
@@ -51,7 +58,7 @@ def create_app() -> FastAPI:
     )
     
     # Add trusted host middleware
-    allowed_hosts = settings.ALLOWED_HOSTS if settings.ENVIRONMENT != "development" else ["*"]
+    allowed_hosts = ["*"] if settings.ENVIRONMENT == "development" else settings.ALLOWED_HOSTS
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=allowed_hosts
@@ -60,6 +67,8 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
     app.include_router(dashboard.router, prefix="/api/v1", tags=["Dashboard"])
+    app.include_router(erp.router, prefix="/api/v1", tags=["ERP"])
+    app.include_router(ai.router, prefix="/api/v1", tags=["AI"])
     app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
     
     @app.get("/health")

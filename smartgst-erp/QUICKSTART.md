@@ -127,7 +127,6 @@ Dashboard → AI Assistant
 ✓ DATABASE_URL - Your PostgreSQL connection
 ✓ SMTP_USERNAME - Gmail address for OTP
 ✓ SMTP_PASSWORD - Gmail app password (not regular password)
-✓ SUPER_ADMIN_EMAIL - Your email for admin access
 ✓ SECRET_KEY - Random secret key
 ```
 
@@ -224,23 +223,6 @@ echo $DATABASE_URL
    - Setup production environment
    - Configure SSL/HTTPS
    - Setup backups
-
----
-
-## Admin Features (Super Admin Only)
-
-Access as: `admin@smartgst.com` (configured in .env)
-
-```
-Dashboard → Admin Panel
-- Manage all users
-- View platform analytics
-- Configure system settings
-- Manage SMTP settings
-- Monitor storage usage
-- View login history
-- Export platform reports
-```
 
 ---
 
@@ -345,7 +327,6 @@ See [API.md](./docs/API.md) for complete API documentation.
 ✅ Multi-branch support
 ✅ Multi-device login
 ✅ Comprehensive audit logging
-✅ Super admin system
 ✅ Production-ready code
 ✅ Docker support
 ✅ Complete documentation

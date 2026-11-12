@@ -1,4 +1,6 @@
-import random
+import hashlib
+import hmac
+import secrets
 import string
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
@@ -18,7 +20,7 @@ class AuthService:
         """Generate random OTP"""
         if length is None:
             length = settings.OTP_LENGTH
-        return ''.join(random.choices(string.digits, k=length))
+        return ''.join(secrets.choice(string.digits) for _ in range(length))
     
     @staticmethod
     def send_otp_to_email(db: Session, email: str) -> tuple[bool, str]:
@@ -46,7 +48,8 @@ class AuthService:
             otp_record = OTP(
                 user_id=user.id,
                 email=email,
-                code=otp_code,
+                code="",
+                code_hash=hashlib.sha256(otp_code.encode("utf-8")).hexdigest(),
                 expires_at=datetime.utcnow() + timedelta(minutes=settings.OTP_EXPIRY_MINUTES)
             )
             db.add(otp_record)
@@ -76,12 +79,19 @@ class AuthService:
             # Find valid OTP
             otp_record = db.query(OTP).filter(
                 OTP.email == email,
-                OTP.code == otp_code,
                 OTP.is_used == False,
-                OTP.expires_at > datetime.utcnow()
-            ).first()
+                OTP.expires_at > datetime.utcnow(),
+                OTP.attempts < settings.OTP_MAX_ATTEMPTS,
+            ).order_by(OTP.created_at.desc()).first()
             
             if not otp_record:
+                return False, "Invalid or expired OTP", None
+
+            expected_hash = otp_record.code_hash or hashlib.sha256(otp_record.code.encode("utf-8")).hexdigest()
+            supplied_hash = hashlib.sha256(otp_code.encode("utf-8")).hexdigest()
+            if not hmac.compare_digest(expected_hash, supplied_hash):
+                otp_record.attempts += 1
+                db.commit()
                 return False, "Invalid or expired OTP", None
             
             # Mark as used
@@ -139,37 +149,3 @@ class AuthService:
             print(f"Error in refresh_access_token: {str(e)}")
             return None
     
-    @staticmethod
-    def is_super_admin(user: User) -> bool:
-        """Check if user is super admin"""
-        return user.email == settings.SUPER_ADMIN_EMAIL and user.role == "super_admin"
-    
-    @staticmethod
-    def setup_super_admin(db: Session) -> bool:
-        """Setup super admin account if not exists"""
-        try:
-            existing_admin = db.query(User).filter(
-                User.email == settings.SUPER_ADMIN_EMAIL,
-                User.role == "super_admin"
-            ).first()
-            
-            if existing_admin:
-                return True
-            
-            # Create super admin
-            super_admin = User(
-                email=settings.SUPER_ADMIN_EMAIL,
-                name=settings.SUPER_ADMIN_NAME,
-                role="super_admin",
-                is_active=True,
-                is_email_verified=True
-            )
-            db.add(super_admin)
-            db.commit()
-            
-            print(f"Super Admin created: {settings.SUPER_ADMIN_EMAIL}")
-            return True
-        
-        except Exception as e:
-            print(f"Error setting up super admin: {str(e)}")
-            return False

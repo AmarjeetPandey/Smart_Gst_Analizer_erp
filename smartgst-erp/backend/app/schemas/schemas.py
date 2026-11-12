@@ -105,6 +105,50 @@ class BranchResponse(BranchBase):
 
 
 # ========================
+# Vendor Schemas
+# ========================
+
+class VendorBase(BaseModel):
+    name: str
+    email: Optional[EmailStr] = None
+    phone: str
+    gst_number: Optional[str] = None
+    pan_number: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    payment_terms: Optional[str] = None
+
+
+class VendorCreate(VendorBase):
+    pass
+
+
+class VendorResponse(VendorBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class VendorUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    gst_number: Optional[str] = None
+    pan_number: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    payment_terms: Optional[str] = None
+
+
+# ========================
 # Customer Schemas
 # ========================
 
@@ -210,15 +254,24 @@ class InvoiceItemCreate(BaseModel):
     quantity: float
     unit_price: Decimal
     gst_rate: float = 0
-    cgst_rate: float = 0
-    sgst_rate: float = 0
-    igst_rate: float = 0
+    cgst_rate: Optional[float] = None
+    sgst_rate: Optional[float] = None
+    igst_rate: Optional[float] = None
 
 
 class InvoiceCreate(BaseModel):
     customer_id: Optional[int] = None
     branch_id: Optional[int] = None
-    invoice_number: str
+    invoice_number: Optional[str] = None
+    shop_name: Optional[str] = None
+    company_gstin: Optional[str] = None
+    company_address: Optional[str] = None
+    company_state: Optional[str] = None
+    company_state_code: Optional[str] = None
+    company_phone: Optional[str] = None
+    company_email: Optional[EmailStr] = None
+    discount_amount: Optional[Decimal] = Decimal("0")
+    discount_percentage: Optional[Decimal] = Decimal("0")
     invoice_date: date
     due_date: Optional[date] = None
     items: List[InvoiceItemCreate]
@@ -227,12 +280,16 @@ class InvoiceCreate(BaseModel):
     remaining_amount: Optional[Decimal] = None
     sku: Optional[str] = None
     payment_proof_data: Optional[str] = None
+    seller_state: Optional[str] = None
+    place_of_supply: Optional[str] = None
 
 
 class InvoiceResponse(BaseModel):
     id: int
     user_id: int
     invoice_number: str
+    shop_name: Optional[str] = None
+    discount_amount: Decimal = Decimal("0")
     invoice_date: date
     due_date: Optional[date]
     subtotal: Decimal
@@ -253,12 +310,68 @@ class InvoiceResponse(BaseModel):
 
 class DashboardSummaryResponse(BaseModel):
     total_sales: Decimal
+    paid_amount: Decimal
     outstanding: Decimal
     total_purchases: Decimal
     total_profit_loss: Decimal
     total_products: int
     total_customers: int
     recent_invoices: List[InvoiceResponse]
+
+
+class PurchaseItemCreate(BaseModel):
+    product_id: Optional[int] = None
+    description: str
+    quantity: float = Field(gt=0)
+    unit_price: Decimal = Field(ge=0)
+    gst_rate: float = Field(default=0, ge=0, le=100)
+
+
+class PurchaseCreate(BaseModel):
+    vendor_id: Optional[int] = None
+    purchase_number: str
+    purchase_date: date
+    due_date: Optional[date] = None
+    items: List[PurchaseItemCreate] = Field(min_length=1)
+    notes: Optional[str] = None
+    seller_state: Optional[str] = None
+    place_of_supply: Optional[str] = None
+
+
+class PurchaseResponse(BaseModel):
+    id: int
+    user_id: int
+    vendor_id: Optional[int]
+    purchase_number: str
+    purchase_date: date
+    due_date: Optional[date]
+    subtotal: Decimal
+    total_tax: Decimal
+    total_amount: Decimal
+    paid_amount: Decimal
+    status: str
+    notes: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ReportSummaryResponse(BaseModel):
+    period_start: date
+    period_end: date
+    sales: Decimal
+    purchases: Decimal
+    tax_collected: Decimal
+    payments_received: Decimal
+    outstanding: Decimal
+    net_result: Decimal
+
+
+class InventoryAdjustmentCreate(BaseModel):
+    product_id: int
+    quantity_delta: float
+    reason: str = Field(min_length=3, max_length=255)
 
 
 # ========================
@@ -283,6 +396,28 @@ class PaymentResponse(BaseModel):
     payment_method: str
     created_at: datetime
     
+    class Config:
+        from_attributes = True
+
+
+class VendorPaymentCreate(BaseModel):
+    purchase_id: int
+    amount: Decimal = Field(gt=0)
+    payment_date: date
+    payment_method: str
+    reference_number: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class VendorPaymentResponse(BaseModel):
+    id: int
+    purchase_id: int
+    vendor_id: int
+    amount: Decimal
+    payment_date: date
+    payment_method: str
+    created_at: datetime
+
     class Config:
         from_attributes = True
 

@@ -17,8 +17,7 @@ SmartGST AI ERP is a comprehensive, self-hostable SaaS application designed for 
 #### 🔐 Authentication System
 - **Email OTP Authentication** - Secure passwordless login
 - **JWT-based Session Management** - Multiple device support
-- **Super Admin System** - Complete platform administration
-- **Role-Based Access Control** - 6 user roles with granular permissions
+- **Role-Based Access Control** - Admin, manager, accountant, operator, and viewer roles
 
 #### 📄 AI Document Processing
 - **Smart OCR** - Extract data from invoices, bills, receipts, GST documents
@@ -292,9 +291,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 # Email (Gmail SMTP)
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
-
-# Admin
-SUPER_ADMIN_EMAIL=admin@smartgst.com
 
 # App Settings
 ENVIRONMENT=production

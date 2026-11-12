@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import decode_token, verify_token
-from app.schemas.schemas import OTPRequest, OTPVerify, LoginResponse, UserResponse, RefreshTokenRequest
+from app.schemas.schemas import OTPRequest, OTPVerify, LoginResponse, UserResponse, RefreshTokenRequest, UserUpdate
 from app.services.auth_service import AuthService
 from app.models.database import User
 
@@ -76,6 +76,10 @@ async def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_
         )
     
     user_id = int(payload.get("sub"))
+
+    user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive or missing")
     
     # Generate new token
     new_tokens = AuthService.refresh_access_token(db, user_id)
@@ -134,3 +138,27 @@ def get_current_user(authorization: Optional[str] = Header(default=None), db: Se
         )
     
     return user
+
+
+@router.get("/users/me", response_model=UserResponse, tags=["Users"])
+def get_profile(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.put("/users/me", response_model=UserResponse, tags=["Users"])
+def update_profile(payload: UserUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(current_user, key, value)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+def require_roles(*roles: str):
+    """Return a dependency that limits an endpoint to selected user roles."""
+    def dependency(current_user: User = Depends(get_current_user)) -> User:
+        if roles and current_user.role.value not in roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+        return current_user
+
+    return dependency

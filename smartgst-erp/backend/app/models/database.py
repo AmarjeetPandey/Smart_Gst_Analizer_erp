@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, Text, ForeignKey, Enum, JSON, Numeric, Date
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, Text, ForeignKey, Enum, Index, JSON, Numeric, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
@@ -8,7 +8,6 @@ Base = declarative_base()
 
 
 class UserRoleEnum(str, enum.Enum):
-    SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
     MANAGER = "manager"
     ACCOUNTANT = "accountant"
@@ -53,7 +52,9 @@ class OTP(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     email = Column(String(255), nullable=False)
-    code = Column(String(10), nullable=False)
+    code = Column(String(10), nullable=False, default="")
+    code_hash = Column(String(64), nullable=True)
+    attempts = Column(Integer, default=0, nullable=False)
     is_used = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
@@ -92,6 +93,7 @@ class Branch(Base):
     address = Column(Text, nullable=True)
     city = Column(String(100), nullable=True)
     state = Column(String(100), nullable=True)
+    state_code = Column(String(10), nullable=True)
     zip_code = Column(String(20), nullable=True)
     gst_number = Column(String(15), unique=True, nullable=True, index=True)
     pan_number = Column(String(10), nullable=True)
@@ -159,12 +161,16 @@ class Vendor(Base):
 class Product(Base):
     """Product model"""
     __tablename__ = "products"
+    __table_args__ = (
+        Index("uq_products_user_sku", "user_id", "sku", unique=True),
+        Index("uq_products_user_barcode", "user_id", "barcode", unique=True),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String(255), nullable=False)
-    sku = Column(String(100), unique=True, nullable=True, index=True)
-    barcode = Column(String(255), unique=True, nullable=True, index=True)
+    sku = Column(String(100), nullable=True)
+    barcode = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
     category = Column(String(255), nullable=True)
     unit = Column(String(50), nullable=False, default="pieces")
@@ -210,12 +216,17 @@ class Inventory(Base):
 class Invoice(Base):
     """Invoice model"""
     __tablename__ = "invoices"
+    __table_args__ = (
+        Index("uq_invoices_user_invoice_number", "user_id", "invoice_number", unique=True),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     branch_id = Column(Integer, ForeignKey("branches.id", ondelete="CASCADE"), nullable=True, index=True)
     customer_id = Column(Integer, ForeignKey("customers.id", ondelete="SET NULL"), nullable=True)
-    invoice_number = Column(String(100), unique=True, nullable=False, index=True)
+    invoice_number = Column(String(100), nullable=False)
+    shop_name = Column(String(255), nullable=True)
+    discount_amount = Column(Numeric(15, 2), default=0)
     invoice_date = Column(Date, nullable=False)
     due_date = Column(Date, nullable=True)
     subtotal = Column(Numeric(15, 2), default=0)
@@ -265,11 +276,14 @@ class InvoiceItem(Base):
 class Purchase(Base):
     """Purchase order model"""
     __tablename__ = "purchases"
+    __table_args__ = (
+        Index("uq_purchases_user_purchase_number", "user_id", "purchase_number", unique=True),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True)
-    purchase_number = Column(String(100), unique=True, nullable=False, index=True)
+    purchase_number = Column(String(100), nullable=False)
     purchase_date = Column(Date, nullable=False)
     due_date = Column(Date, nullable=True)
     subtotal = Column(Numeric(15, 2), default=0)

@@ -1,11 +1,13 @@
 import os
+import json
 from functools import lru_cache
-from typing import List, Optional
+from typing import List
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 
 # Load .env file explicitly
-load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
+load_dotenv(os.path.join(os.path.dirname(__file__), '../../../.env'))
 
 
 class Settings(BaseSettings):
@@ -19,7 +21,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     
     # Database
-    DATABASE_URL: str = "sqlite:///./smartgst_dev.db"
+    DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/smartgst_db"
     DATABASE_ECHO: bool = False
     
     # Redis
@@ -29,7 +31,7 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     
     # JWT
-    SECRET_KEY: str = "dev-secret-key-change-in-production-12345"
+    SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -44,10 +46,7 @@ class Settings(BaseSettings):
     # OTP
     OTP_EXPIRY_MINUTES: int = 10
     OTP_LENGTH: int = 6
-    
-    # Super Admin
-    SUPER_ADMIN_EMAIL: str = "admin@smartgst.com"
-    SUPER_ADMIN_NAME: str = "Super Admin"
+    OTP_MAX_ATTEMPTS: int = 5
     
     # URLs
     FRONTEND_URL: str = "http://localhost:3000"
@@ -69,13 +68,8 @@ class Settings(BaseSettings):
     REMEMBER_LOGIN_DAYS: int = 30
     
     # Security
-    CORS_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ]
-    ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1", "testserver", "*"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1", "testserver"]
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_PERIOD: int = 3600
     
@@ -104,6 +98,31 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore",
     )
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value):
+        if isinstance(value, str):
+            if value.strip().startswith("["):
+                return json.loads(value)
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
+
+    @field_validator("ALLOWED_HOSTS", mode="before")
+    @classmethod
+    def parse_allowed_hosts(cls, value):
+        if isinstance(value, str):
+            if value.strip().startswith("["):
+                return json.loads(value)
+            return [host.strip() for host in value.split(",") if host.strip()]
+        return value
+
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def validate_secret_key(cls, value):
+        if not value or len(value) < 32:
+            raise ValueError("SECRET_KEY must be set and contain at least 32 characters")
+        return value
 
 
 @lru_cache()

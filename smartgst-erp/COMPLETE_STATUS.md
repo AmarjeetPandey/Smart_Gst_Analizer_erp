@@ -62,7 +62,6 @@ Output:
 
 ✅ backend/app/core/config.py
    - Made DATABASE_URL and SECRET_KEY optional with defaults
-   - Added SUPER_ADMIN_EMAIL default
    - Updated CORS_ORIGINS to include multiple hosts
    - Made SMTP credentials optional
 
